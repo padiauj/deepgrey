@@ -1,4 +1,5 @@
 #include "player.h"
+#include <ctime> // for timing
 
 /*
  * Constructor for the player; initialize everything here. The side your AI is
@@ -8,6 +9,7 @@
 Player::Player(Side side) {
     // Will be set to true in test_minimax.cpp.
     testingMinimax = false;
+    time_t init = time(0);
 
     /* 
      * TODO: Do any initialization you need to do here (setting up the board,
@@ -35,9 +37,7 @@ Player::~Player() {
  * return NULL.
  */
 Move *Player::doMove(Move *opponentsMove, int msLeft) {
-    /* 
-     * TODO: Implement how moves your AI should play here. You should first
-     * process the opponent's opponents move before calculating your own move
-     */ 
+    time_t init = time(0);
+
     return NULL;
 }
