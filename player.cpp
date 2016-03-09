@@ -117,7 +117,7 @@ Move * just_heuristic(Side playerSide, Board * board) {
     if (!moves->empty()) {
         // search for move with best score
         int best_score = BOARD_SIZE * BOARD_SIZE;
-        Move * best_move;
+        Move * best_move = &moves->at(0);
 
         for (int i=0; i<moves->size(); i++) {
             Board * tempBoard  = board->copy();
