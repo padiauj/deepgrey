@@ -14,14 +14,14 @@ public:
     ~Player();
     
     Move *doMove(Move *opponentsMove, int msLeft);
-    vector<Move > *getPossibleMoves(Side side, Board * testBoard) ;
+
+    Board * board;
 
     // Flag to tell if the player is running within the test_minimax context
     bool testingMinimax;
 private:
     Side playerSide;
     Side opponentSide;
-    Board * board;
 };
 
 #endif
