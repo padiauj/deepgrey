@@ -75,8 +75,6 @@ int getHeuristic(Side side, Board * testboard) {
 
 }
 
-
-
 /*
  * Constructor for the player; initialize everything here. The side your AI is
  * on (BLACK or WHITE) is passed in as "side". The constructor must finish 
@@ -92,8 +90,6 @@ Player::Player(Side side) {
     srand(time(NULL));
 }
 
-
-
 /*
  * Destructor for the player.
  */
@@ -101,86 +97,9 @@ Player::~Player() {
     delete board;
 }
 
-Move * just_valid(Side playerSide, Board * board) {
-    std::vector<Move> * moves = getPossibleMoves(playerSide, board);
-    if (!moves->empty()) {
-        int rand_idx = rand() % (moves->size());
-        Move * playerMove = &moves->at(rand_idx);
-        return playerMove;
-    }
-    return NULL;
 
-}
+Move * getMove(Side side, Board board, long msLeft) {
 
-Move * just_heuristic(Side playerSide, Board * board) {
-    std::vector<Move> * moves = getPossibleMoves(playerSide, board);
-    if (!moves->empty()) {
-        // search for move with best score
-        int best_score = BOARD_SIZE * BOARD_SIZE;
-        Move * best_move = &moves->at(0);
-
-        for (int i=0; i<moves->size(); i++) {
-            Board * tempBoard  = board->copy();
-            Move * tempMove = &moves->at(i);
-
-            tempBoard->doMove(tempMove, playerSide);
-            int score = getHeuristic(playerSide, tempBoard);
-            tempMove->setScore(score);
-
-            if (score > best_score) {
-                best_score = score;
-                best_move = tempMove;
-            }
-            delete tempBoard;
-        }
-
-        return best_move;
-    }
-    return NULL;
-
-}
-
-
-int minplay(Side playerSide, Board * board) {
-        std::vector<Move> * moves = getPossibleMoves(playerSide, board);
-        if (!moves->empty()) {
-            Move * best_move = &moves->at(0);
-            for (int i=0; i<moves->size(); i++) {
-                // test the move out
-                Board * tempBoard  = board->copy();
-                Move * tempMove = &moves->at(i);
-                tempBoard->doMove(tempMove, playerSide);
-
-                tempMove->setScore(getScore(playerSide, board));
-                if (tempMove->getScore() < best_move->getScore()) {
-                    best_move = tempMove;
-                }
-            }
-        }
-        return getScore(playerSide, board);
-}
-
-/**
- * The minimax algorithm (high score is better) as described in Assignment 9
- */
-Move * minimax(Side playerSide, Board * board) {
-        std::vector<Move> * moves = getPossibleMoves(playerSide, board);
-        if (!moves->empty()) {
-            Move * best_move = &moves->at(0);
-            for (int i=0; i<moves->size(); i++) {
-                // test the move out
-                Board * tempBoard  = board->copy();
-                Move * tempMove = &moves->at(i);
-                tempBoard->doMove(tempMove, playerSide);
-
-                tempMove->setScore(minplay(playerSide, board));
-                if (tempMove->getScore() > best_move->getScore()) {
-                    best_move = tempMove;
-                }
-            }
-            return best_move;
-        }
-        return NULL;
 }
 
 
@@ -203,13 +122,8 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
         board->doMove(opponentsMove, opponentSide);
 
     }
-    /* uncomment, recomment  for various levels of AI (valid moves, minimax,
-       heuristic to beat SimplePlayer)
-       */
 
- //     Move * playerMove = just_valid(playerSide, board);
-      Move * playerMove = just_heuristic(playerSide, board);
-//    Move * playerMove = minimax(playerSide, board);
+    Move * playerMove = getMove(playerSide, board);
     if (playerMove != NULL) {
         board->doMove(playerMove, playerSide);
     }
