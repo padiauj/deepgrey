@@ -56,6 +56,34 @@ int getScore(Side side, Board * testboard) {
     return testboard->count(side)-testboard->count(opSide) ;
 }
 
+int getCompositeScore(Side side, Board * testboard, int x, int y) {
+                int temp = 0;
+
+                if (x == 1 || x == 6 || y == 1 || y == 6) {
+                    // take care of dangerous pitfalls
+                    temp -= 1;
+                    if (x == 6 && y == 6 && !testboard->get(side, 7,7)) {
+                        temp -= 10;
+                    }
+                    if (x == 1 && y == 6 && !testboard->get(side, 0,7))  {
+                        temp -= 10;
+                    }
+                    if (x == 6 && y == 1 && !testboard->get(side, 7,0))  {
+                        temp -= 10;
+                    }
+                    if (x == 1 && y == 1 && !testboard->get(side, 0,0)) {
+                        temp -= 10;
+                    }
+                }
+                if ((x == 0 || x == 7) && (y == 0 || y == 7)) {
+                    temp += 100;
+                }
+                if (x == 0 || x == 7 || y == 0 || y == 7) {
+                    temp += 50;
+                }
+                return temp;
+}
+
 /**
  * Gets the heuristic: combination of respective captures, and mobility
  */
@@ -65,39 +93,15 @@ int getHeuristic(Side side, Board * testboard) {
 
     for (int x=0; x < BOARD_SIZE; x++) {
         for (int y=0; y <BOARD_SIZE; y++) {
-            // check if this is a corner
-            int temp = 0;
-            if ((x == 0 || x == 7) && (y == 0 || y == 7)) {
-                temp += 40;
-            }
-            if (x == 0 || x == 7 || y == 0 || y == 7) {
-                temp += 10;
-            }
-            if (x == 1 || x == 6 || y == 1 || y == 6) {
-                // take care of dangerous pitfalls
-                temp -= 1;
-                if (x == 1 && y == 1 && !testboard->get(side, 0,0)) {
-                    temp -= 5;
-                }
-                if (x == 1 && y == 6 && !testboard->get(side, 0,7)) {
-                    temp -= 5;
-                }
-                if (x == 6 && y == 1 && !testboard->get(side, 7,0)) {
-                    temp -= 5;
-                }
-                if (x == 6 && y == 6 && !testboard->get(side, 7,7)) {
-                    temp -= 5;
-                }
-            }
             if (testboard->get(side, x,y)) {
-                score += temp;
+                score += getCompositeScore(side, testboard,x,y);
             } else if(testboard->get(opSide, x,y)) {
-                score += -1*temp;
+                score -= getCompositeScore(opSide, testboard,x,y);
             }
         }
+
     }
     return score;
-
 }
 
 /*
@@ -125,6 +129,7 @@ Player::~Player() {
 int negamax(Side side, Board * board, int depth, int a, int b, long msLeft) {
     std::vector<Move> * moves = getPossibleMoves(side, board);
     if (moves->size() == 0 || depth == 0) {
+        delete moves;
         return getHeuristic(side, board);
     }
     for (size_t i=0; i<moves->size(); ++i) {
@@ -134,9 +139,11 @@ int negamax(Side side, Board * board, int depth, int a, int b, long msLeft) {
         temp->doMove(tempMove, side);
         a = max(a, -negamax(opSide, temp, depth - 1, -b, -a, msLeft));
         if (b <= a) {
+            delete moves;
             return b;
         }
     }
+    delete moves;
     return a;
 }
 
@@ -158,28 +165,28 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
 
     if (opponentsMove != NULL) {
         board->doMove(opponentsMove, opponentSide);
-
     }
 
     std::vector<Move> * moves = getPossibleMoves(playerSide, board);
-    int a = -numeric_limits<int>::max();
-    int b = numeric_limits<int>::max();
-    Move * playerMove = &moves->at(0);
-    for (size_t i=0; i<moves->size(); ++i) {
-        Board * temp = board->copy();
-        Move * tempMove = &moves->at(i);
-        temp->doMove(tempMove, playerSide);
-        int score = negamax(playerSide, temp, 4, a, b, msLeft);
-        if (score > a) {
-            a = score;
-            playerMove = tempMove;
+    if (moves->size() != 0) {
+        int a = -numeric_limits<int>::max();
+        int b = numeric_limits<int>::max();
+        Move * playerMove = &moves->at(0);
+        for (size_t i=0; i<moves->size(); ++i) {
+            Board * temp = board->copy();
+            Move * tempMove = &moves->at(i);
+            temp->doMove(tempMove, playerSide);
+            int score = negamax(playerSide, temp, 4, a, b, msLeft);
+            if (score > a) {
+                a = score;
+                playerMove = tempMove;
+            }
         }
-    }
-
-    if (playerMove != NULL) {
         board->doMove(playerMove, playerSide);
+        return playerMove;
     }
+    delete moves;
+    return NULL;
 
-    return playerMove;
 }
 
