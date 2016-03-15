@@ -8,7 +8,8 @@ enum Side {
 class Move {
    
 public:
-    int x, y, score;
+    int x, y;
+    float score;
     Move(int x, int y) {
         this->x = x;
         this->y = y;        
@@ -18,11 +19,11 @@ public:
 
     int getX() { return x; }
     int getY() { return y; }
-    int getScore() { return score; }
+    float getScore() { return score; }
 
     void setX(int x) { this->x = x; }
     void setY(int y) { this->y = y; }
-    void setScore(int score) { this->score = score; }
+    void setScore(float score) { this->score = score; }
 };
 
 #endif

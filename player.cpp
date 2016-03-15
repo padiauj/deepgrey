@@ -4,9 +4,12 @@
 #include <ctime> // for timing
 #include <cstdlib>
 #include <unistd.h>
+#include <limits>
+#include <algorithm>
 
 #define BOARD_SIZE 8
 #define EPSILON_TIME 15 
+#define MAX_DEPTH 10
 
 /**
  * Prints current board state
@@ -57,21 +60,43 @@ int getScore(Side side, Board * testboard) {
  * Gets the heuristic: combination of respective captures, and mobility
  */
 int getHeuristic(Side side, Board * testboard) {
+    int score = 0;
     Side opSide = (side == BLACK) ? WHITE : BLACK;
-    int difference_score = (float)getScore(side, testboard)/ 
-        (float) ( testboard->count(side)+testboard->count(opSide)) ;
-    
-    std::vector<Move> * pmoves = getPossibleMoves(side, testboard);
-    std::vector<Move> * omoves = getPossibleMoves(opSide, testboard);
-    int pmoves_num = pmoves->size();
-    int omoves_num = omoves->size();
-    int num_moves;
-    if (pmoves_num + omoves_num == 0) {
-        num_moves = 0;
-    }
-    num_moves = (float)(pmoves_num - omoves_num)/(float)(pmoves_num + omoves_num);
 
-    return (100*(num_moves + difference_score));
+    for (int x=0; x < BOARD_SIZE; x++) {
+        for (int y=0; y <BOARD_SIZE; y++) {
+            // check if this is a corner
+            int temp = 0;
+            if ((x == 0 || x == 7) && (y == 0 || y == 7)) {
+                temp += 40;
+            }
+            if (x == 0 || x == 7 || y == 0 || y == 7) {
+                temp += 10;
+            }
+            if (x == 1 || x == 6 || y == 1 || y == 6) {
+                // take care of dangerous pitfalls
+                temp -= 1;
+                if (x == 1 && y == 1 && !testboard->get(side, 0,0)) {
+                    temp -= 5;
+                }
+                if (x == 1 && y == 6 && !testboard->get(side, 0,7)) {
+                    temp -= 5;
+                }
+                if (x == 6 && y == 1 && !testboard->get(side, 7,0)) {
+                    temp -= 5;
+                }
+                if (x == 6 && y == 6 && !testboard->get(side, 7,7)) {
+                    temp -= 5;
+                }
+            }
+            if (testboard->get(side, x,y)) {
+                score += temp;
+            } else if(testboard->get(opSide, x,y)) {
+                score += -1*temp;
+            }
+        }
+    }
+    return -1*score;
 
 }
 
@@ -97,9 +122,73 @@ Player::~Player() {
     delete board;
 }
 
+float max_value(Side side, Board * board, int depth, float alpha, float beta) {
+    if (depth >= MAX_DEPTH) {
+        return getHeuristic(side, board);
+    }
+    float best_score = numeric_limits<float>::infinity() * -1;
+    Side opSide = (side == BLACK) ? WHITE : BLACK;
+    std::vector<Move> * moves = getPossibleMoves(side, board);
+    for (size_t i = 0; i < moves->size(); ++i) {
+        Board * temp = board->copy();
+        Move * tempMove = &moves->at(i);
+        temp->doMove(tempMove, side);
+        float score = min_value(opSide, temp, depth+1, alpha, beta);
+        delete temp;
+        best_score = max(best_score, score);
+        if (best_score >= beta) {
+            return best_score;
+        } 
+        beta = max(best_score, alpha);
 
-Move * getMove(Side side, Board board, long msLeft) {
+    }
+        return best_score;
 
+}
+
+float min_value(Side side, Board * board, int depth, float alpha, float beta) {
+    if (depth >= MAX_DEPTH) {
+        return getHeuristic(side, board);
+    }
+    float best_score = numeric_limits<float>::infinity();
+    Side opSide = (side == BLACK) ? WHITE : BLACK;
+
+    std::vector<Move> * moves = getPossibleMoves(side, board);
+    for (size_t i = 0; i < moves->size(); ++i) {
+        Board * temp = board->copy();
+        Move * tempMove = &moves->at(i);
+        temp->doMove(tempMove, side);
+        float score = max_value(opSide, temp, depth+1, alpha, beta);
+        delete temp;
+        best_score = min(best_score, score);
+        if (best_score <= beta) {
+            return best_score;
+        } 
+        beta = min(best_score, beta);
+    }
+        return best_score;
+
+}
+
+Move * abpruning(Side side, Board * board, long msLeft) {
+    int depth = 0;
+    std::vector<Move> * moves = getPossibleMoves(side, board);
+    if (moves->size() != 0) {
+        Move * best = &moves->at(0);
+        for (size_t i = 0; i < moves->size(); ++i) {
+            Board * temp = board->copy();
+            Move * tempMove = &moves->at(i);
+            temp->doMove(tempMove, side);
+            float score = min_value(side, temp, depth+1, -1*numeric_limits<float>::infinity(), numeric_limits<float>::infinity());
+            tempMove->setScore(score);
+            if (score > best->getScore()) {
+                best = tempMove;
+            }
+        }
+        return best;
+    } else {
+        return NULL;
+    }
 }
 
 
@@ -123,7 +212,7 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
 
     }
 
-    Move * playerMove = getMove(playerSide, board);
+    Move * playerMove = abpruning(playerSide, board, msLeft);
     if (playerMove != NULL) {
         board->doMove(playerMove, playerSide);
     }
